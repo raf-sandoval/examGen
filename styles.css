@@ -1,0 +1,15 @@
+.correct-ans:checked{
+    background-color: #198754;
+    border-color: #0f5132;
+}
+
+
+.incorrect-ans:checked{
+    background-color: #dc3545;
+    border-color: #842029;
+}
+
+
+.inline-q{
+    display:inline !important;
+}

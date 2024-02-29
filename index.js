@@ -1,0 +1,363 @@
+let thisQuiz;
+
+const CORRECT_ANSWER_DIV = "border bg-success-subtle border-success-subtle";
+const CORRECT_ANSWER_INPUT = "correct-ans";
+
+const MISSED_ANSWER_DIV = "border border-success-subtle border-3";
+const MISSED_ANSWER_LABEL = "text-success";
+
+const INCORRECT_ANSWER_DIV = "border bg-danger-subtle border-danger-subtle";
+const INCORRECT_ANSWER_INPUT = "incorrect-ans";
+
+function updateVal(elId, val) {
+  document.getElementById(elId).value = val;
+}
+
+function getRndInteger(max) {
+  return Math.floor(Math.random() * max); 
+}
+
+function setColor(color){
+  document.getElementsByTagName("html")[0].attributes['data-bs-theme'].value = color;
+}
+
+//For Bootstrap accordions
+const collapseElementList = document.querySelectorAll('.collapse');
+const collapseList = [...collapseElementList].map(collapseEl => new bootstrap.Collapse(collapseEl));
+
+function getQuiz() { //Get HTML elements from form
+  let questionsForm = document.forms.setQuiz;
+  let questionData = new FormData(questionsForm);
+
+  var questionsFile = questionData.get('questionsFile');
+  var questionsData;
+  var numQuestions = questionData.get('numQuestions');
+
+  var questionsType = document.getElementsByName("questionType")[0].checked ? "answer_official" : "answer_community";
+
+  //Reading questions
+  getJSON(questionsFile, numQuestions, questionsType);
+}
+
+function getJSON(JSONfile, numQuestions, questionsType) { // Read the raw string from the uploaded file
+  const reader = new FileReader();
+
+  reader.addEventListener(
+    "load",
+    () => {
+      processJSON(JSON.parse(reader.result), numQuestions, questionsType);
+    },
+    false,
+  );
+  if (JSONfile) {
+    reader.readAsText(JSONfile);
+  }
+}
+
+/*/INPUTS: q_json: the question file in JSON format
+           numQuestions: number of questions
+           questionsType: either community or official answers
+*/
+function processJSON(q_json, numQuestions, questionsType){
+  var jsonArr = Object.keys(q_json);
+  var genQuiz = {}; //structure: {1: {qNum: 'X', qAns: 'YZ', qShow: 'CABE}, 2...}
+  for(var i = 0; i < numQuestions; i++)
+  genQuiz[i] = {'qNum':'Z', 'qAns':'ZZZ', 'qShow':'XXX'};
+
+  // Create array with random selection of questions from uploaded JSON
+  for(var i = 0; i < numQuestions; i++){
+    var x = getRndInteger(jsonArr.length);
+    genQuiz[i]['qNum'] = x;
+    jsonArr.pop(x);
+  }
+
+  //Create array with the original answers corresponding to the question selection
+  for(var i = 0; i < numQuestions; i++){
+    genQuiz[i]['qAns'] = q_json[genQuiz[i]['qNum']][questionsType];
+  }
+
+  thisQuiz = new Quiz(q_json, genQuiz, numQuestions);
+}
+
+class Quiz {
+  genQuiz;
+  numQuestions;
+  userAnswers;
+  score;
+
+  constructor(jsonQuiz, genQuiz, numQuestions) {
+    this.jsonQuiz = jsonQuiz;
+    this.genQuiz = genQuiz;
+
+    this.numQuestions = numQuestions;
+
+    this.score = 0;
+
+    const CORRECT_ANSWER_DIV = "border bg-success-subtle border-success-subtle";
+    const CORRECT_ANSWER_INPUT = "correct-ans";
+
+    const MISSED_ANSWER_DIV = "border border-success-subtle border-3";
+    const MISSED_ANSWER_LABEL = "text-success";
+
+    const INCORRECT_ANSWER_DIV = "border bg-danger-subtle border-danger-subtle";
+    const INCORRECT_ANSWER_INPUT = "incorrect-ans";
+
+    for (var i = 0; i < Object.keys(this.genQuiz).length; i++) {
+      this.genQuiz[i]["qShow"] = this.randomizeOptions(i);
+    }
+
+    let loadButton = document.getElementById("load-quiz");
+    loadButton.setAttribute("disabled", "");
+
+    //Functions need binding when called from the onClick event
+    //this.checkAnswers = this.checkAnswers.bind(this);
+
+    this.showQuiz();
+    document.getElementById("submit-quiz").addEventListener("click",this,false); //adding eventListener to Class
+  }
+
+  showQuiz() { //Generates all the questions and a submit button
+    let accordionQuestions = document.getElementById("accordionQuestions");
+
+    for (var i = 0; i < this.numQuestions; i++) accordionQuestions.appendChild(this.createQuestionChoices(i));
+    this.appendSubmit();
+  }
+
+  getQuestionText(q_num) {
+    return this.jsonQuiz[this.genQuiz[q_num]["qNum"]]["question"];
+  }
+
+  showOptionText(q_num, letter, displayLetter = "Z") {
+    if (displayLetter !== "Z") {
+      return displayLetter + ". " + this.jsonQuiz[this.genQuiz[q_num]["qNum"]]["options"][letter];
+    }
+    return letter + ". " + this.jsonQuiz[this.genQuiz[q_num]["qNum"]]["options"][letter];
+  }
+
+  showOptions(q_num, multiChoice = false) {
+    var a_z = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    let stringOptions = "";
+
+
+    for (var i = 0; i < Object.keys(this.genQuiz[q_num].qShow).length; i++) {
+      stringOptions += `<div class="form-check" id="${q_num + 1}-${a_z[i]}">
+          <input class="form-check-input ms-1" type="${multiChoice ? "checkbox" : "radio"}" name="ANS-${q_num + 1}" id="ANS-${q_num + 1}-${a_z[i]}" value="ANS-${q_num + 1}-${a_z[i]}">
+          <label class="form-check-label ms-2 inline-q" for="ANS-${q_num + 1}-${a_z[i]}"> ${this.showOptionText(q_num, this.genQuiz[q_num].qShow[i], a_z[i])}</label>
+          </div>`;
+    }
+
+    return stringOptions;
+  }
+
+  createQuestionChoices(q_num) {
+    var questionItem = document.createElement("div");
+    questionItem.className = `accordion-item${q_num > 0 ? " mt-4" : ""}`;
+    questionItem.id = `Q-${q_num + 1}`;
+
+    var questionHeader = document.createElement("h2");
+    questionHeader.className = 'accordion-header';
+    questionHeader.innerHTML = `<button class="accordion-button collapsed text-bg-secondary" type="button" data-bs-toggle="collapse"
+        data-bs-target="#collapse${q_num + 1}" aria-expanded="false" aria-controls="collapse${q_num + 1}">
+        Question ${q_num + 1}</button>`;
+    questionItem.appendChild(questionHeader);
+
+    var questionBody = document.createElement("div");
+    questionBody.className = "accordion-collapse pb-2 collapse show";
+    questionBody.id = `collapse${q_num + 1}`;
+
+    var accordionBody = document.createElement("div");
+    accordionBody.className = "accordion-body";
+
+    accordionBody.innerHTML = `<p class="mb-4">${this.getQuestionText(q_num)}</p>`
+    accordionBody.innerHTML += this.showOptions(q_num, this.genQuiz[q_num].qAns.length > 1 ? true : false);
+
+    questionBody.appendChild(accordionBody);
+    questionItem.appendChild(questionBody);
+
+    return questionItem;
+  }
+
+  appendSubmit() {
+    let body = document.getElementsByTagName("body")[0];
+    let footer = document.getElementsByTagName("footer")[0];
+    let submitDiv = document.createElement("div");
+
+    submitDiv.className = "container text-center mt-4";
+    submitDiv.innerHTML = `<button type="button" class="btn btn-success btn-lg" id="submit-quiz">Submit</button>`;
+
+    body.insertBefore(submitDiv, footer);
+  }
+
+  randomizeOptions(q_num) { //returns randomized options in qShow format (e.g. "ABCD" -> "DABC")
+    let defOptions = Object.keys(this.jsonQuiz[this.genQuiz[q_num]["qNum"]]["options"]);
+    let randOptions = defOptions.sort(() => Math.random() - 0.5);
+    let randString = "";
+
+    for (var i = 0; i < randOptions.length; i++) {
+      randString += randOptions[i];
+    }
+    return randString;
+  }
+
+  getQuestionNumberFromAnswer(inputDiv){
+    return inputDiv.id.split("-")[1];
+  }
+
+  getLetterFromAnswer(inputDiv){
+    let selected = inputDiv.id.split("-")[2];
+    return selected ? selected : "*"; //If unanswered, returns null character
+  }
+
+  translateSourceAnswer(genQuizItem){//needs the input of one GenQuiz entry. It must have the 'selected' property. Translates selections to JSON file original choices
+    //If qAns is set to True will return the original question's answer translated with the randomizer
+    let alphabetKey = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    let translation = "";
+
+    for(var i = 0; i < genQuizItem.qAns.length; i++) {
+      //translation += genQuizItem["qShow"][alphabetKey.indexOf(genQuizItem["qAns"][i])];
+      translation += alphabetKey[genQuizItem["qShow"].indexOf(genQuizItem["qAns"][i])];
+    }
+
+    return translation.split("").sort().join("");
+  }
+
+  styleChoices(genQuizItem, index){
+    if(genQuizItem.selected){//If not empty answers
+      if (genQuizItem.selected.length == 1) {//Single choice
+        if (isCorrect(genQuizItem)) {
+          styleCorrectAnswer((index + 1).toString() + "-" + genQuizItem["selected"]);
+        }
+        else {
+          styleIncorrectAnswer((index + 1).toString() + "-" + genQuizItem["selected"]);
+          styleMissedAnswer((index + 1).toString() + "-" + genQuizItem["translatedAnswer"]);
+        }
+      }
+      else{ //Multiple Choice
+        for(const choice of genQuizItem.selected){ //Styles picked answers
+          genQuizItem["translatedAnswer"].includes(choice) ? styleCorrectAnswer((index+1).toString() + "-" + choice) : styleIncorrectAnswer((index+1).toString() + "-" + choice);
+        }
+
+        for(const choiceOK of genQuizItem["translatedAnswer"]){ //Styles missed answers
+          if(!genQuizItem.selected.includes(choiceOK)){
+            styleMissedAnswer((index+1).toString() + "-" + choiceOK);
+          }
+        }
+      }
+    }
+    else{ //EMPTY ANSWERS
+      if(genQuizItem.qAns.length == 1){ //Single choice empty answers
+        styleMissedAnswer((index+1).toString() + "-" + genQuizItem["translatedAnswer"]);
+      }
+      else{ //Multiple choice empty answers
+        for (const choiceOK of genQuizItem["translatedAnswer"]) {
+          styleMissedAnswer((index + 1).toString() + "-" + choiceOK);
+        }
+      }
+    }
+
+    function styleCorrectAnswer(id){
+      document.getElementById(id).classList += " " + CORRECT_ANSWER_DIV; //PARENT DIV FOR ANSWER
+      document.getElementById("ANS-" + id).classList += " " + CORRECT_ANSWER_INPUT; //DIV FOR RADIO BUTTON/CHECKBOX
+    }
+    function styleIncorrectAnswer(id){
+      document.getElementById(id).classList += " " + INCORRECT_ANSWER_DIV; //PARENT DIV FOR ANSWER
+      document.getElementById("ANS-" + id).classList += " " + INCORRECT_ANSWER_INPUT; //DIV FOR RADIO BUTTON/CHECKBOX
+    }
+    function styleMissedAnswer(id){
+      document.getElementById(id).classList += " " + MISSED_ANSWER_DIV; //PARENT DIV FOR ANSWER
+      document.querySelector("label[for=ANS-" + id).classList += " " + MISSED_ANSWER_LABEL; //LABEL TEXT DIV
+      document.getElementById("ANS-" + id).setAttribute("style", "opacity:0.7 !important; margin-left: calc(.25rem - 2.4px) !important;"); //FIXES BUTTON MOVING ON ADDING BORDER
+    }
+
+    function isCorrect(quizItem){
+      return quizItem.selected ? quizItem["selected"] == quizItem["translatedAnswer"] : false;
+    }
+
+  }
+
+  disableChoices(){ //disables choices while retaining some opacity and submit button
+    let allAnswers = document.querySelectorAll("input[id^=ANS]");
+    let allLabels = document.querySelectorAll("label[for^=ANS]");
+
+    for(const ANSWER of allAnswers){
+      ANSWER.setAttribute("disabled","");
+      ANSWER.setAttribute("style", "opacity:0.7 !important");
+    }
+
+    for(const LABEL of allLabels){
+      LABEL.setAttribute("style", "opacity:0.7 !important");
+    }
+
+    document.getElementById("submit-quiz").setAttribute("disabled", "");
+  }
+  
+  checkAnswers(){
+    let checkedAnswers = document.querySelectorAll("input[id^=ANS]:checked");
+    this.disableChoices();
+    
+    for(const ans of checkedAnswers){ //adds "selected" property to each genQuiz question
+      if(this.genQuiz[this.getQuestionNumberFromAnswer(ans)-1]["selected"] === undefined){
+        this.genQuiz[this.getQuestionNumberFromAnswer(ans)-1]["selected"] = this.getLetterFromAnswer(ans);
+      }
+      else{
+        this.genQuiz[this.getQuestionNumberFromAnswer(ans)-1]["selected"] += this.getLetterFromAnswer(ans);
+      }
+    }
+
+    for(var i = 0; i < this.numQuestions; i++){ //adds a version of selected that matches the original JSON, then checks for correct answer
+      this.genQuiz[i]["translatedAnswer"] = this.translateSourceAnswer(this.genQuiz[i], true);
+
+      let badge = document.createElement("span");
+      let originalAnswer = document.createElement("div");
+
+      //Add original question text
+      originalAnswer.className = "mt-3"; 
+      originalAnswer.innerText = "Original Question #:   " + this.genQuiz[i]["qNum"]; 
+      document.getElementById("Q-"+(i+1)).lastChild.firstChild.appendChild(originalAnswer);
+
+
+      if(this.genQuiz[i]["translatedAnswer"] == this.genQuiz[i]["selected"]){ //checks each answer for correctness, then adds score and badge
+        this.score +=1;
+        badge.className = "badge bg-success ms-3";
+        badge.innerText = "Correct";
+      }
+      else{
+        badge.className = "badge bg-danger ms-3";
+        badge.innerText = "Incorrect";
+      }
+      document.getElementById("Q-"+(i+1)).firstChild.firstChild.appendChild(badge);
+
+      this.styleChoices(this.genQuiz[i], i);
+      
+    }
+
+    console.log(this.genQuiz);
+    this.showScoreAndReturn();
+  }
+
+  showScoreAndReturn(){
+    let pass = this.score / this.numQuestions >= 0.6;
+
+    let resultsHTML = `<div id="results" class="container col-md-10 mt-5">
+    <div class="card border-${pass ? "success" : "danger"}">
+        <div class="card-header bg-${pass ? "success" : "danger"} text-center"> <h3>Results</h3> </div>
+        <div class="card-body text-center"> <h2>${this.score}/${this.numQuestions}</h2>
+            <h3 class="text-${pass ? "success" : "danger"}"><strong>${pass ? "PASS" : "FAIL"}</strong></h3>
+            <button class="btn btn-warning btn-sm mt-3" onClick="location.reload()">Restart Test</button>
+        </div>
+      </div>
+    </div>`;
+
+    document.getElementsByClassName("container col-md-10 mt-3")[0].insertAdjacentHTML("afterend", resultsHTML);
+    document.getElementById("results").scrollIntoView();
+
+  }
+
+  handleEvent(event){
+    switch (event.type){
+      case "click":
+        this.checkAnswers();
+        break;
+    }
+  }
+}
