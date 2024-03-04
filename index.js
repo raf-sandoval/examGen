@@ -59,16 +59,17 @@ function getJSON(JSONfile, numQuestions, questionsType) { // Read the raw string
            questionsType: either community or official answers
 */
 function processJSON(q_json, numQuestions, questionsType){
-  var jsonArr = Object.keys(q_json);
-  var genQuiz = {}; //structure: {1: {qNum: 'X', qAns: 'YZ', qShow: 'CABE}, 2...}
-  for(var i = 0; i < numQuestions; i++)
-  genQuiz[i] = {'qNum':'Z', 'qAns':'ZZZ', 'qShow':'XXX'};
+  let jsonArr = Object.keys(q_json);
+  let genQuiz = {}; //structure: {1: {qNum: 'X', qAns: 'YZ', qShow: 'CABE}, 2...}
+  for(var i = 0; i < numQuestions; i++){
+    genQuiz[i] = {'qNum':'Z', 'qAns':'ZZZ', 'qShow':'XXX'};
+  }
 
   // Create array with random selection of questions from uploaded JSON
   for(var i = 0; i < numQuestions; i++){
     var x = getRndInteger(jsonArr.length);
-    genQuiz[i]['qNum'] = x;
-    jsonArr.pop(x);
+    genQuiz[i]['qNum'] = jsonArr[x];
+    jsonArr.splice(x,1);
   }
 
   //Create array with the original answers corresponding to the question selection
@@ -108,9 +109,6 @@ class Quiz {
 
     let loadButton = document.getElementById("load-quiz");
     loadButton.setAttribute("disabled", "");
-
-    //Functions need binding when called from the onClick event
-    //this.checkAnswers = this.checkAnswers.bind(this);
 
     this.showQuiz();
     document.getElementById("submit-quiz").addEventListener("click",this,false); //adding eventListener to Class
@@ -156,7 +154,7 @@ class Quiz {
 
     var questionHeader = document.createElement("h2");
     questionHeader.className = 'accordion-header';
-    questionHeader.innerHTML = `<button class="accordion-button collapsed text-bg-secondary" type="button" data-bs-toggle="collapse"
+    questionHeader.innerHTML = `<button class="accordion-button border-top" type="button" data-bs-toggle="collapse"
         data-bs-target="#collapse${q_num + 1}" aria-expanded="false" aria-controls="collapse${q_num + 1}">
         Question ${q_num + 1}</button>`;
     questionItem.appendChild(questionHeader);
@@ -331,7 +329,6 @@ class Quiz {
       
     }
 
-    console.log(this.genQuiz);
     this.showScoreAndReturn();
   }
 

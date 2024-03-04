@@ -13,3 +13,7 @@
 .inline-q{
     display:inline !important;
 }
+
+.changelog{
+    font-size: small;
+}
