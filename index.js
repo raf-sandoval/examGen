@@ -21,6 +21,12 @@ function setColor(color){
   document.getElementsByTagName("html")[0].attributes['data-bs-theme'].value = color;
 }
 
+function scrolltoChangelog(){
+  let changelog = document.getElementById("changelog");
+
+  changelog.addEventListener('shown.bs.collapse', () => {changelog.scrollIntoView()});
+}
+
 //For Bootstrap accordions
 const collapseElementList = document.querySelectorAll('.collapse');
 const collapseList = [...collapseElementList].map(collapseEl => new bootstrap.Collapse(collapseEl));
@@ -30,22 +36,26 @@ function getQuiz() { //Get HTML elements from form
   let questionData = new FormData(questionsForm);
 
   var questionsFile = questionData.get('questionsFile');
-  var questionsData;
+
+  //Append questions filename and date to title on generation
+  document.title = questionsFile.name.split(".json").toString().replace(",", "") + " | " + new Date(Date.now()).toDateString().split(" ").slice(1,3).toString().replaceAll(",", "-");
+
   var numQuestions = questionData.get('numQuestions');
 
   var questionsType = document.getElementsByName("questionType")[0].checked ? "answer_official" : "answer_community";
 
+  let passingScore = questionData.get("passingScore");
   //Reading questions
-  getJSON(questionsFile, numQuestions, questionsType);
+  getJSON(questionsFile, numQuestions, questionsType, passingScore);
 }
 
-function getJSON(JSONfile, numQuestions, questionsType) { // Read the raw string from the uploaded file
+function getJSON(JSONfile, numQuestions, questionsType, passingScore) { // Read the raw string from the uploaded file
   const reader = new FileReader();
 
   reader.addEventListener(
     "load",
     () => {
-      processJSON(JSON.parse(reader.result), numQuestions, questionsType);
+      processJSON(JSON.parse(reader.result), numQuestions, questionsType, passingScore);
     },
     false,
   );
@@ -58,7 +68,7 @@ function getJSON(JSONfile, numQuestions, questionsType) { // Read the raw string
            numQuestions: number of questions
            questionsType: either community or official answers
 */
-function processJSON(q_json, numQuestions, questionsType){
+function processJSON(q_json, numQuestions, questionsType, passingScore){
   let jsonArr = Object.keys(q_json);
   let genQuiz = {}; //structure: {1: {qNum: 'X', qAns: 'YZ', qShow: 'CABE}, 2...}
   for(var i = 0; i < numQuestions; i++){
@@ -77,7 +87,7 @@ function processJSON(q_json, numQuestions, questionsType){
     genQuiz[i]['qAns'] = q_json[genQuiz[i]['qNum']][questionsType];
   }
 
-  thisQuiz = new Quiz(q_json, genQuiz, numQuestions);
+  thisQuiz = new Quiz(q_json, genQuiz, numQuestions, passingScore);
 }
 
 class Quiz {
@@ -86,11 +96,12 @@ class Quiz {
   userAnswers;
   score;
 
-  constructor(jsonQuiz, genQuiz, numQuestions) {
+  constructor(jsonQuiz, genQuiz, numQuestions, passingScore) {
     this.jsonQuiz = jsonQuiz;
     this.genQuiz = genQuiz;
 
     this.numQuestions = numQuestions;
+    this.passingScore = passingScore;
 
     this.score = 0;
 
@@ -333,7 +344,7 @@ class Quiz {
   }
 
   showScoreAndReturn(){
-    let pass = this.score / this.numQuestions >= 0.6;
+    let pass = this.score / this.numQuestions >= (this.passingScore * 0.01);
 
     let resultsHTML = `<div id="results" class="container col-md-10 mt-5">
     <div class="card border-${pass ? "success" : "danger"}">
