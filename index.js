@@ -356,7 +356,7 @@ class Quiz {
       </div>
     </div>`;
 
-    document.getElementsByClassName("container col-md-10 mt-3")[0].insertAdjacentHTML("afterend", resultsHTML);
+    document.getElementById("questionSettings").insertAdjacentHTML("afterend", resultsHTML);
     document.getElementById("results").scrollIntoView();
 
   }

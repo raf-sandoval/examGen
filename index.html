@@ -44,38 +44,43 @@
     <div class="container col-md-10 text-center">
         <h1>Exam Generator</h1>
     </div>
-    <div class="container col-md-10 mt-3">
+    <div class="container col-md-9 mt-3" id="questionSettings">
         <div class="card">
             <div class="card-header bg-primary-subtle">
-                Load questions
+                Question Settings
             </div>
             <div class="card-body pb-3">
                 <form id="setQuiz" onsubmit="return false">
                     <label for="formFile" class="form-label">Please upload the questions.json file.</label>
                     <input class="form-control mb-4" type="file" id="formFile" name="questionsFile" required>
 
-                    <label for="numberOfQuestions1" class="form-label">Number of questions for this test
-                        (10-60)</label>
-                    <div class="row align-items-center mb-4">
-                        <div class="col-9">
-                            <input name="numQuestions" type="range" class="form-range" min="10" max="60" value="30"
-                                id="numberOfQuestions1" oninput="updateVal('numberOfQuestions2', this.value);">
+                    <div class="row">
+                        <div class="col">
+                            <label for="numberOfQuestions1" class="form-label">Number of questions for this test
+                                (10-60)</label>
+                            <div class="row align-items-center mb-4">
+                                <div class="col-10">
+                                    <input name="numQuestions" type="range" class="form-range" min="10" max="60" value="30"
+                                        id="numberOfQuestions1" oninput="updateVal('numberOfQuestions2', this.value);">
+                                </div>
+                                <div class="col-2">
+                                    <input type="number" class="form-control" id="numberOfQuestions2" value="30" min="10" max="60"
+                                        oninput="updateVal('numberOfQuestions1', this.value);">
+                                </div>
+                            </div>
                         </div>
-                        <div class="col-3">
-                            <input type="number" class="form-control" id="numberOfQuestions2" value="30" min="10" max="60"
-                                oninput="updateVal('numberOfQuestions1', this.value);">
+                        <div class="col">
+                            <label for="passingScore1" class="form-label">Passing Score (50-100)</label>
+                        <div class="row align-items-center mb-4">
+                            <div class="col-10">
+                                <input name="passingScore" type="range" class="form-range" min="50" max="100" value="80"
+                                    id="passingScore1" oninput="updateVal('passingScore2', this.value);">
+                            </div>
+                            <div class="col-2">
+                                <input type="number" class="form-control" id="passingScore2" value="80" min="50" max="100"
+                                    oninput="updateVal('passingScore1', this.value);">
+                            </div>
                         </div>
-                    </div>
-
-                    <label for="passingScore1" class="form-label">Passing Score (50-100)</label>
-                    <div class="row align-items-center mb-4">
-                        <div class="col-9">
-                            <input name="passingScore" type="range" class="form-range" min="50" max="100" value="80"
-                                id="passingScore1" oninput="updateVal('passingScore2', this.value);">
-                        </div>
-                        <div class="col-3">
-                            <input type="number" class="form-control" id="passingScore2" value="80" min="50" max="100"
-                                oninput="updateVal('passingScore1', this.value);">
                         </div>
                     </div>
 
