@@ -60,7 +60,7 @@ function getJSON(JSONfile, numQuestions, questionsType, passingScore) { // Read 
     false,
   );
   if (JSONfile) {
-    reader.readAsText(JSONfile);
+    reader.readAsText(JSONfile, "ANSI");
   }
 }
 
