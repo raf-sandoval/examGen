@@ -53,9 +53,10 @@ function getJSON(JSONfile, numQuestions, questionsType, passingScore) { // Read 
   const reader = new FileReader();
 
   reader.addEventListener(
-    "load",
+    "loadend",
     () => {
-      processJSON(JSON.parse(reader.result), numQuestions, questionsType, passingScore);
+      let parsedJSON = JSON.parse(reader.result);
+      processJSON(parsedJSON, numQuestions, questionsType, passingScore);
     },
     false,
   );
@@ -69,11 +70,15 @@ function getJSON(JSONfile, numQuestions, questionsType, passingScore) { // Read 
            questionsType: either community or official answers
 */
 function processJSON(q_json, numQuestions, questionsType, passingScore){
-  let jsonArr = Object.keys(q_json);
+  //debugger; 
+  let jsonArr =  Object.keys(q_json);
+  
   let genQuiz = {}; //structure: {1: {qNum: 'X', qAns: 'YZ', qShow: 'CABE}, 2...}
   for(var i = 0; i < numQuestions; i++){
     genQuiz[i] = {'qNum':'Z', 'qAns':'ZZZ', 'qShow':'XXX'};
   }
+
+  if(jsonArr.indexOf("images") > 0) jsonArr.pop(); //Prevents the images from being selected as questions
 
   // Create array with random selection of questions from uploaded JSON
   for(var i = 0; i < numQuestions; i++){
@@ -86,7 +91,6 @@ function processJSON(q_json, numQuestions, questionsType, passingScore){
   for(var i = 0; i < numQuestions; i++){
     genQuiz[i]['qAns'] = q_json[genQuiz[i]['qNum']][questionsType];
   }
-
   thisQuiz = new Quiz(q_json, genQuiz, numQuestions, passingScore);
 }
 
@@ -98,12 +102,18 @@ class Quiz {
 
   constructor(jsonQuiz, genQuiz, numQuestions, passingScore) {
     this.jsonQuiz = jsonQuiz;
+    console.log(jsonQuiz);
     this.genQuiz = genQuiz;
 
     this.numQuestions = numQuestions;
     this.passingScore = passingScore;
 
     this.score = 0;
+
+    //checking images in json
+    if(jsonQuiz.images && Object.getOwnPropertyNames(jsonQuiz.images).length > 0){
+      this.hasImages = true;
+    }
 
     const CORRECT_ANSWER_DIV = "border bg-success-subtle border-success-subtle";
     const CORRECT_ANSWER_INPUT = "correct-ans";
@@ -158,6 +168,13 @@ class Quiz {
     return stringOptions;
   }
 
+  showImage(q_num){
+    let img = document.createElement("img");
+    img.className = "mb-3 mx-auto d-block";
+    img.src = `data:image/png;base64,${this.jsonQuiz.images[this.genQuiz[q_num]["qNum"]]}`;
+    return img;
+  }
+
   createQuestionChoices(q_num) {
     var questionItem = document.createElement("div");
     questionItem.className = `accordion-item${q_num > 0 ? " mt-4" : ""}`;
@@ -178,6 +195,12 @@ class Quiz {
     accordionBody.className = "accordion-body";
 
     accordionBody.innerHTML = `<p class="mb-4">${this.getQuestionText(q_num)}</p>`
+    
+    if(this.jsonQuiz.images[this.genQuiz[q_num]["qNum"]]){
+      console.log("Question " + q_num + " has an image!!");
+      accordionBody.appendChild(this.showImage(q_num))
+    }
+
     accordionBody.innerHTML += this.showOptions(q_num, this.genQuiz[q_num].qAns.length > 1 ? true : false);
 
     questionBody.appendChild(accordionBody);
