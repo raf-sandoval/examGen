@@ -170,7 +170,7 @@ class Quiz {
 
   showImage(q_num){
     let img = document.createElement("img");
-    img.className = "mb-3 mx-auto d-block";
+    img.className = "mb-3 mx-auto d-block mw-100";
     img.src = `data:image/png;base64,${this.jsonQuiz.images[this.genQuiz[q_num]["qNum"]]}`;
     return img;
   }
@@ -197,7 +197,6 @@ class Quiz {
     accordionBody.innerHTML = `<p class="mb-4">${this.getQuestionText(q_num)}</p>`
     
     if(this.jsonQuiz.images[this.genQuiz[q_num]["qNum"]]){
-      console.log("Question " + q_num + " has an image!!");
       accordionBody.appendChild(this.showImage(q_num))
     }
 
