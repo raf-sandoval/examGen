@@ -254,7 +254,7 @@ class Quiz {
 
   styleChoices(genQuizItem, index){
     if(genQuizItem.selected){//If not empty answers
-      if (genQuizItem.selected.length == 1) {//Single choice
+      if (genQuizItem.translatedAnswer == 1) {//Single choice
         if (isCorrect(genQuizItem)) {
           styleCorrectAnswer((index + 1).toString() + "-" + genQuizItem["selected"]);
         }
@@ -286,15 +286,20 @@ class Quiz {
       }
     }
 
+    //STYLE ANSWERS: input: string in the form of [question]-[choice]. Example: 12-C
+    //Will style the selected 
     function styleCorrectAnswer(id){
+      console.log(id);
       document.getElementById(id).classList += " " + CORRECT_ANSWER_DIV; //PARENT DIV FOR ANSWER
       document.getElementById("ANS-" + id).classList += " " + CORRECT_ANSWER_INPUT; //DIV FOR RADIO BUTTON/CHECKBOX
     }
     function styleIncorrectAnswer(id){
+      console.log(id);
       document.getElementById(id).classList += " " + INCORRECT_ANSWER_DIV; //PARENT DIV FOR ANSWER
       document.getElementById("ANS-" + id).classList += " " + INCORRECT_ANSWER_INPUT; //DIV FOR RADIO BUTTON/CHECKBOX
     }
     function styleMissedAnswer(id){
+      console.log(id);
       document.getElementById(id).classList += " " + MISSED_ANSWER_DIV; //PARENT DIV FOR ANSWER
       document.querySelector("label[for=ANS-" + id).classList += " " + MISSED_ANSWER_LABEL; //LABEL TEXT DIV
       document.getElementById("ANS-" + id).setAttribute("style", "opacity:0.7 !important; margin-left: calc(.25rem - 2.4px) !important;"); //FIXES BUTTON MOVING ON ADDING BORDER
