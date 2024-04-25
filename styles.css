@@ -17,3 +17,16 @@
 .changelog{
     font-size: small;
 }
+
+/* Remove number spinner */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Remove number spinner: Firefox */
+input[type=number] {
+  -moz-appearance: textfield;
+  text-align: center;
+}
