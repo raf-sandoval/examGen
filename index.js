@@ -9,6 +9,70 @@ const MISSED_ANSWER_LABEL = "text-success";
 const INCORRECT_ANSWER_DIV = "border bg-danger-subtle border-danger-subtle";
 const INCORRECT_ANSWER_INPUT = "incorrect-ans";
 
+//Resets file on soft-refresh
+window.addEventListener('load', function() {
+  let file = document.getElementById("formFile");
+  file.value = "";
+  file.addEventListener('input', () => showQuestionSettings());
+});
+
+//Update form when a file is selected
+function showQuestionSettings(){
+  const JSONfile = document.getElementById("formFile").files[0];
+
+  document.getElementById("formFile").setAttribute("disabled","");
+  document.getElementById("quizSettings").removeAttribute("hidden");  
+
+  //Change tab and page titles to reflect exam
+  document.title = JSONfile.name.split(".json").join("") + " | " + new Date(Date.now()).toDateString().split(" ").slice(1,3).toString().replaceAll(",", "-");
+  document.querySelector("h1").innerText = JSONfile.name.split(".json").join("");
+
+  document.getElementById("load-quiz").removeAttribute("hidden");
+  document.getElementById("reload-page").removeAttribute("hidden");
+
+  //Read JSON file
+
+  const reader = new FileReader();
+
+  reader.addEventListener(
+    "loadend",
+    () => {
+      let parsedJSON = JSON.parse(reader.result);
+      const totalQuestions = Object.keys(parsedJSON).includes('images') ? Object.keys(parsedJSON).length - 1: Object.keys(parsedJSON).length;
+
+      //Format page with updated info from JSON
+      const numberOfQuestions1 = document.getElementById("numberOfQuestions1");
+      const numberOfQuestions2 = document.getElementById("numberOfQuestions2");
+      const passingScore1 = document.getElementById("passingScore1");
+      const passingScore2 = document.getElementById("passingScore2");
+
+      numberOfQuestions1.max = totalQuestions;
+      numberOfQuestions2.max = totalQuestions;
+
+      numberOfQuestions1.value = totalQuestions;
+      numberOfQuestions2.value = totalQuestions;
+      document.querySelector('.form-label[for="numberOfQuestions1"]').innerText = `Number of Questions (10-${totalQuestions})`;
+
+      //TODO: Add event listener to load-quiz button and call processJSON with the necessary data
+      document.getElementById("load-quiz").onclick = () => {
+        document.getElementById("load-quiz").toggleAttribute("hidden");
+        numberOfQuestions1.toggleAttribute("disabled");
+        numberOfQuestions2.toggleAttribute("disabled");
+        passingScore1.toggleAttribute("disabled");
+        passingScore2.toggleAttribute("disabled");
+
+        processJSON(parsedJSON, numberOfQuestions1.value, "answer_community", passingScore1);
+      }
+    },
+    false,
+  );
+  if (JSONfile) {
+    reader.readAsText(JSONfile, "UTF-8");
+  }
+}
+
+
+//Used for question sliders
 function updateVal(elId, val) {
   document.getElementById(elId).value = val;
 }
@@ -17,6 +81,7 @@ function getRndInteger(max) {
   return Math.floor(Math.random() * max); 
 }
 
+//Sets light or dark theme
 function setColor(color){
   document.getElementsByTagName("html")[0].attributes['data-bs-theme'].value = color;
 }
@@ -31,41 +96,7 @@ function scrolltoChangelog(){
 const collapseElementList = document.querySelectorAll('.collapse');
 const collapseList = [...collapseElementList].map(collapseEl => new bootstrap.Collapse(collapseEl));
 
-function getQuiz() { //Get HTML elements from form
-  let questionsForm = document.forms.setQuiz;
-  let questionData = new FormData(questionsForm);
-
-  var questionsFile = questionData.get('questionsFile');
-
-  //Append questions filename and date to title on generation
-  document.title = questionsFile.name.split(".json").toString().replace(",", "") + " | " + new Date(Date.now()).toDateString().split(" ").slice(1,3).toString().replaceAll(",", "-");
-
-  var numQuestions = questionData.get('numQuestions');
-
-  var questionsType = document.getElementsByName("questionType")[0].checked ? "answer_official" : "answer_community";
-
-  let passingScore = questionData.get("passingScore");
-  //Reading questions
-  getJSON(questionsFile, numQuestions, questionsType, passingScore);
-}
-
-function getJSON(JSONfile, numQuestions, questionsType, passingScore) { // Read the raw string from the uploaded file
-  const reader = new FileReader();
-
-  reader.addEventListener(
-    "loadend",
-    () => {
-      let parsedJSON = JSON.parse(reader.result);
-      processJSON(parsedJSON, numQuestions, questionsType, passingScore);
-    },
-    false,
-  );
-  if (JSONfile) {
-    reader.readAsText(JSONfile, "UTF-8");
-  }
-}
-
-/*/INPUTS: q_json: the question file in JSON format
+/*INPUTS: q_json: the question file in JSON format
            numQuestions: number of questions
            questionsType: either community or official answers
 */
