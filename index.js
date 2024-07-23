@@ -1,13 +1,94 @@
 let thisQuiz;
-let remainingQuiz = {}; //Leftover questions, may be saved to localStorage
 
+const CORRECT_ANSWER_DIV = "border bg-success-subtle border-success-subtle";
+const CORRECT_ANSWER_INPUT = "correct-ans";
+
+const MISSED_ANSWER_DIV = "border border-success-subtle border-3";
+const MISSED_ANSWER_LABEL = "text-success";
+
+const INCORRECT_ANSWER_DIV = "border bg-danger-subtle border-danger-subtle";
+const INCORRECT_ANSWER_INPUT = "incorrect-ans";
 
 //Resets file on soft-refresh
 window.addEventListener('load', function() {
   let file = document.getElementById("formFile");
   file.value = "";
   file.addEventListener('input', () => showQuestionSettings());
+
+  checkOngoingExams();
 });
+
+/* ++++++++++++++++++++++++++++++++++++++++++++++++++++
+NOTE: Structure of local JSON
+Data items: currentQuiz, currentAnswers, remainingQuiz, quizChoice
+
+currentQuiz     -->   the current questions and answers on the Quiz, the contents of genQuiz
+originalJSON    -->   original uploaded file
+quizName        -->   the name of the current Quiz, when being prompted to continue 
+currentAnswers  -->   the currently selected answers 
+remainingQuiz   -->   the remaining jsonArr after all the splices
+passingScore    -->   saved passing score
+
+When to write to localStorage:
+1. Add a save quiz button, save currentQuiz and currentAnswers to localStorage
+2. After finishing a Quiz, save remainingQuiz to localStorage
++++++++++++++++++++++++++++++++++++++++++++++++++++++++  */
+
+function checkOngoingExams() {
+  const quizName = localStorage.getItem("quizName");
+  const currentQuiz = JSON.parse(localStorage.getItem("currentQuiz"));
+  const remainingQuiz = JSON.parse(localStorage.getItem("remainingQuiz"));
+  const originalJSON = JSON.parse(localStorage.getItem("originalJSON"));
+  const currentAnswers = JSON.parse(localStorage.getItem("currentAnswers"));
+  const passingScore = parseInt(localStorage.getItem("passingScore"));
+
+  const resumeModal = new bootstrap.Modal(document.getElementById('resumeModal'));
+
+  document.getElementById("resume-title").innerText = `Resume ${quizName}`;
+
+  //Resume previous quiz if current data is found.
+  if(currentQuiz && currentAnswers){
+    document.getElementById("resume-progress").innerText = `${Object.keys(currentAnswers).length} questions answered`;
+    document.getElementById("resume-pending").innerText = `${Object.keys(currentQuiz).includes('images') ?
+       Object.keys(currentQuiz).length - 1 - Object.keys(currentAnswers).length:
+       Object.keys(currentQuiz).length - Object.keys(currentAnswers).length} questions pending`;
+    
+    resumeModal.show();
+   
+    //Option to continue the test
+    document.getElementById("resume-A").addEventListener('click',e => resumeQuiz());
+    //Restart quiz
+    document.getElementById("resume-B").addEventListener('click',e => restartQuiz());
+  }
+
+  function resumeQuiz(){
+    resumeModal.hide();
+    document.getElementById("formFile").toggleAttribute("disabled");
+    document.getElementById("reload-page").removeAttribute("hidden");
+    document.getElementById("reload-page").addEventListener("click",e => localStorage.clear());
+
+
+    new Quiz(originalJSON, 
+      currentQuiz, 
+      Object.keys(currentQuiz).includes('images') ? Object.keys(currentQuiz).length - 1: Object.keys(currentQuiz).length,
+      passingScore);
+    //
+    selectSavedAnswers();
+    
+  }
+
+  function restartQuiz(){
+    resumeModal.hide();
+    localStorage.clear();
+  }
+
+  //Checks all the answers in currentAnswers
+  function selectSavedAnswers(){
+    for (const [question, answers] of Object.entries(currentAnswers)) {
+      answers.split("").forEach(answer => document.querySelector(`input[id^=ANS-${question}-${answer}]`).setAttribute("checked", true));
+    }
+  }
+}
 
 //Update form when a file is selected
 function showQuestionSettings(){
@@ -24,15 +105,16 @@ function showQuestionSettings(){
 
   document.getElementById("load-quiz").removeAttribute("hidden");
   document.getElementById("reload-page").removeAttribute("hidden");
+  document.getElementById("reload-page").addEventListener("click",e => localStorage.clear());
 
-  //Read JSON file
 
+  //Read JSON file and display settings dynamically
   const reader = new FileReader();
-
   reader.addEventListener(
     "loadend",
     () => {
       let parsedJSON = JSON.parse(reader.result);
+      localStorage.setItem("originalJSON", JSON.stringify(parsedJSON));
       const totalQuestions = Object.keys(parsedJSON).includes('images') ? Object.keys(parsedJSON).length - 1: Object.keys(parsedJSON).length;
 
       //Format page with updated info from JSON
@@ -96,6 +178,8 @@ const collapseList = [...collapseElementList].map(collapseEl => new bootstrap.Co
 */
 function processJSON(q_json, numQuestions, questionsType, passingScore){
   let jsonArr =  Object.keys(q_json);
+  let remainingQuiz = {}; //Leftover questions, may be saved to localStorage
+
   
   let genQuiz = {}; //structure: {1: {qNum: 'X', qAns: 'YZ', qShow: 'CABE}, 2...}
   for(var i = 0; i < numQuestions; i++){
@@ -105,19 +189,6 @@ function processJSON(q_json, numQuestions, questionsType, passingScore){
   if(jsonArr.indexOf("images") > 0) jsonArr.pop(); //Prevents the images from being selected as questions
 
 
-  /* ++++++++++++++++++++++++++++++++++++++++++++++++++++
-  NOTE: Structure of local JSON
-  Data items: currentQuiz, currentAnswers, remainingQuiz, quizChoice
-
-  currentQuiz     -->   the current questions and answers on the Quiz, the contents of genQuiz !DONE!
-  quizName        -->   the name of the current Quiz, when being prompted to continue !DONE!
-  currentAnswers  -->   the currently selected answers !DONE!
-  remainingQuiz   -->   the remaining jsonArr after all the splices   !DONE!
-
-  When to write to localStorage:
-  1. Add a save quiz button, save currentQuiz and currentAnswers to localStorage
-  2. After finishing a Quiz, save remainingQuiz to localStorage
-  +++++++++++++++++++++++++++++++++++++++++++++++++++++++  */
 
   // Create array with random selection of questions from uploaded JSON
   for(var i = 0; i < numQuestions; i++){
@@ -126,6 +197,7 @@ function processJSON(q_json, numQuestions, questionsType, passingScore){
   }
 
   jsonArr.forEach(val => remainingQuiz[val] = q_json[val]); //Filling remainingQuiz with leftover questions
+  //Save remaining quiz data
   localStorage.setItem("remainingQuiz", JSON.stringify(remainingQuiz));
 
   //Create array with the original answers corresponding to the question selection
@@ -155,15 +227,6 @@ class Quiz {
       this.hasImages = true;
     }
 
-    const CORRECT_ANSWER_DIV = "border bg-success-subtle border-success-subtle";
-    const CORRECT_ANSWER_INPUT = "correct-ans";
-
-    const MISSED_ANSWER_DIV = "border border-success-subtle border-3";
-    const MISSED_ANSWER_LABEL = "text-success";
-
-    const INCORRECT_ANSWER_DIV = "border bg-danger-subtle border-danger-subtle";
-    const INCORRECT_ANSWER_INPUT = "incorrect-ans";
-
     for (var i = 0; i < Object.keys(this.genQuiz).length; i++) {
       this.genQuiz[i]["qShow"] = this.randomizeOptions(i);
     }
@@ -188,7 +251,6 @@ class Quiz {
     });
 
     localStorage.setItem("currentAnswers", JSON.stringify(selectedQuestions));
-
   };
 
   showQuiz() { //Generates all the questions and a submit button
@@ -442,6 +504,9 @@ class Quiz {
     document.getElementById("questionSettings").insertAdjacentHTML("afterend", resultsHTML);
     document.getElementById("results").scrollIntoView();
 
+    //Removing current quiz info
+    localStorage.removeItem("currentQuiz");
+    localStorage.removeItem("currentAnswers");
   }
 
   handleEvent(event){

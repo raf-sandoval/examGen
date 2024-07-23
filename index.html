@@ -133,4 +133,36 @@
     </div>
 </div>
 
+<div class="modal" id="resumeModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Resume Quiz</h5>
+        </div>
+        <div class="modal-body">
+          <h5 id="promptText" class="text-center mb-3">Existing quiz data has been found. Would you like to resume your previous quiz?</h5>
+          <div class="row">
+            <div class="col justify-content-center">
+                <button id="resume-A" class="mx-auto btn btn-primary" style="width:100%">
+                    <div class="card-body">
+                    <h5 id="resume-title" class="card-title fw-bold">Resume QUIZ</h5>
+                    <span id="resume-progress">X questions in progress</span><br>
+                    <span id="resume-pending">Y questions remaining</span><br>
+                    </div>
+                </button>
+            </div>
+            <div class="col">
+                <button id="resume-B" class="btn btn-danger" style="width:100%; height:100%">
+                    <div id="option-B-body" class="card-body" >
+                    <h5 id="option-B-title" class="card-title fw-bold">New Quiz</h5>
+                      Start a new quiz.
+                    </div>
+                </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </html>
