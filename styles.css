@@ -1,21 +1,29 @@
-.correct-ans:checked{
-    background-color: #198754;
-    border-color: #0f5132;
+.correct-ans:checked {
+  background-color: #198754;
+  border-color: #0f5132;
 }
 
 
-.incorrect-ans:checked{
-    background-color: #dc3545;
-    border-color: #842029;
+.incorrect-ans:checked {
+  background-color: #dc3545;
+  border-color: #842029;
 }
 
 
-.inline-q{
-    display:inline !important;
+.inline-q {
+  display: inline !important;
 }
 
-.changelog{
-    font-size: small;
+.changelog {
+  font-size: small;
+}
+
+.changelog>h6 {
+  margin-top: 1rem;
+}
+
+.changelog>h6:first-of-type{
+  margin-top: unset;
 }
 
 /* Remove number spinner */
