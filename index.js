@@ -14,7 +14,149 @@ window.addEventListener('load', function() {
   let file = document.getElementById("formFile");
   file.value = "";
   file.addEventListener('input', () => showQuestionSettings());
+
+  checkOngoingExams();
 });
+
+/* ++++++++++++++++++++++++++++++++++++++++++++++++++++
+NOTE: Structure of local JSON
+Data items: currentQuiz, currentAnswers, remainingQuiz, quizChoice
+
+currentQuiz     -->   the current questions and answers on the Quiz, the contents of genQuiz
+originalJSON    -->   original uploaded file
+quizName        -->   the name of the current Quiz, when being prompted to continue 
+currentAnswers  -->   the currently selected answers 
+remainingQuiz   -->   the remaining quiz in new JSON format
+passingScore    -->   saved passing score
+
+When to write to localStorage:
+1. Add a save quiz button, save currentQuiz and currentAnswers to localStorage
+2. After finishing a Quiz, save remainingQuiz to localStorage
++++++++++++++++++++++++++++++++++++++++++++++++++++++++  */
+
+function checkOngoingExams() {
+  const quizName = localStorage.getItem("quizName");
+  const currentQuiz = JSON.parse(localStorage.getItem("currentQuiz"));
+  const remainingQuiz = JSON.parse(localStorage.getItem("remainingQuiz"));
+  const originalJSON = JSON.parse(localStorage.getItem("originalJSON"));
+  const currentAnswers = JSON.parse(localStorage.getItem("currentAnswers"));
+  const passingScore = parseInt(localStorage.getItem("passingScore"));
+
+  const resumeModal = new bootstrap.Modal(document.getElementById('resumeModal'));
+
+  document.getElementById("resume-title").innerText = `Resume ${quizName}`;
+
+  //Resume previous quiz if current data is found.
+  if(currentQuiz && currentAnswers){
+    document.getElementById("resume-progress").innerText = `${Object.keys(currentAnswers).length} questions answered`;
+    document.getElementById("resume-pending").innerText = `${Object.keys(currentQuiz).includes('images') ?
+       Object.keys(currentQuiz).length - 1 - Object.keys(currentAnswers).length:
+       Object.keys(currentQuiz).length - Object.keys(currentAnswers).length} questions pending`;
+    
+    resumeModal.show();
+   
+    //Option to continue the test
+    document.getElementById("resume-A").addEventListener('click',e => resumeQuiz());
+    //Restart quiz
+    document.getElementById("resume-B").addEventListener('click',e => restartQuiz());
+  }
+  //Allow choosing a new exam pool
+  else if(remainingQuiz){
+    document.getElementById("promptText").innerText = `You can start a new quiz with leftover questions from ${quizName}.` 
+    document.getElementById("resume-progress").innerText = `You have solved ${Object.keys(originalJSON).length - Object.keys(remainingQuiz).length} questions.`;
+    document.getElementById("resume-pending").innerText = `${Object.keys(remainingQuiz).length} questions pending.`;
+    resumeModal.show();
+
+    //Option to continue the test
+    document.getElementById("resume-A").addEventListener('click',e => {
+      resumeModal.hide();
+      showRemainingQuiz();
+    });
+    //Restart quiz
+    document.getElementById("resume-B").addEventListener('click',e => restartQuiz());
+  }
+
+  function resumeQuiz(){
+    resumeModal.hide();
+    document.getElementById("formFile").toggleAttribute("disabled");
+    document.getElementById("reload-page").removeAttribute("hidden");
+    document.getElementById("reload-page").addEventListener("click",e => localStorage.clear());
+
+
+    new Quiz(originalJSON, 
+      currentQuiz, 
+      Object.keys(currentQuiz).includes('images') ? Object.keys(currentQuiz).length - 1: Object.keys(currentQuiz).length,
+      passingScore);
+    //
+    selectSavedAnswers();
+  }
+
+  function restartQuiz(){
+    resumeModal.hide();
+    localStorage.clear();
+  }
+
+  //Checks all the answers in currentAnswers
+  function selectSavedAnswers(){
+    for (const [question, answers] of Object.entries(currentAnswers)) {
+      answers.split("").forEach(answer => document.querySelector(`input[id^=ANS-${question}-${answer}]`).setAttribute("checked", true));
+    }
+  }
+}
+
+//Show settings when quiz is resumed, a clone of showQuestionSettings
+function showRemainingQuiz(){
+  const filePicker = document.getElementById("formFile");
+
+
+  document.getElementById("quizSettings").removeAttribute("hidden"); 
+  filePicker.toggleAttribute("hidden");
+
+  const parsedJSON = JSON.parse(localStorage.getItem("remainingQuiz"));
+  const quizName = localStorage.getItem("quizName");
+  document.title = quizName + " | " + new Date(Date.now()).toDateString().split(" ").slice(1,3).toString().replaceAll(",", "-");
+  document.querySelector("h1").innerText = quizName;
+
+  //Show special text when resuming a Quiz
+  const fileTitle = document.querySelector(".form-label[for=formFile]");
+  fileTitle.innerText = `Solving the remaining quiz questions.`;
+  fileTitle.classList += "fw-bold fst-italic text-primary-emphasis mb-2 fs-5";
+
+  document.getElementById("load-quiz").removeAttribute("hidden");
+  document.getElementById("reload-page").removeAttribute("hidden");
+  document.getElementById("reload-page").addEventListener("click",e => localStorage.clear());
+
+  //Read JSON file and display settings dynamically
+  const totalQuestions = Object.keys(parsedJSON).includes('images') ? Object.keys(parsedJSON).length - 1: Object.keys(parsedJSON).length;
+
+  //Format page with updated info from JSON
+  const numberOfQuestions1 = document.getElementById("numberOfQuestions1");
+  const numberOfQuestions2 = document.getElementById("numberOfQuestions2");
+  const passingScore1 = document.getElementById("passingScore1");
+  const passingScore2 = document.getElementById("passingScore2");
+
+  if(totalQuestions < 10){
+    numberOfQuestions1.min = 1;
+    numberOfQuestions2.min = 1;
+  }
+
+  numberOfQuestions1.max = totalQuestions;
+  numberOfQuestions2.max = totalQuestions;
+
+  numberOfQuestions1.value = totalQuestions;
+  numberOfQuestions2.value = totalQuestions;
+  document.querySelector('.form-label[for="numberOfQuestions1"]').innerText = `Number of Questions (${numberOfQuestions1.min}-${totalQuestions})`;
+
+  document.getElementById("load-quiz").onclick = () => {
+    document.getElementById("load-quiz").toggleAttribute("hidden");
+    numberOfQuestions1.toggleAttribute("disabled");
+    numberOfQuestions2.toggleAttribute("disabled");
+    passingScore1.toggleAttribute("disabled");
+    passingScore2.toggleAttribute("disabled");
+
+    processJSON(parsedJSON, numberOfQuestions1.value, "answer_community", passingScore1);
+  }
+}
 
 //Update form when a file is selected
 function showQuestionSettings(){
@@ -24,20 +166,23 @@ function showQuestionSettings(){
   document.getElementById("quizSettings").removeAttribute("hidden");  
 
   //Change tab and page titles to reflect exam
-  document.title = JSONfile.name.split(".json").join("") + " | " + new Date(Date.now()).toDateString().split(" ").slice(1,3).toString().replaceAll(",", "-");
-  document.querySelector("h1").innerText = JSONfile.name.split(".json").join("");
+  const quizName = JSONfile.name.split(".json").join("");
+  document.title = quizName + " | " + new Date(Date.now()).toDateString().split(" ").slice(1,3).toString().replaceAll(",", "-");
+  document.querySelector("h1").innerText = quizName;
+  localStorage.setItem("quizName", quizName);
 
   document.getElementById("load-quiz").removeAttribute("hidden");
   document.getElementById("reload-page").removeAttribute("hidden");
+  document.getElementById("reload-page").addEventListener("click",e => localStorage.clear());
 
-  //Read JSON file
 
+  //Read JSON file and display settings dynamically
   const reader = new FileReader();
-
   reader.addEventListener(
     "loadend",
     () => {
       let parsedJSON = JSON.parse(reader.result);
+      localStorage.setItem("originalJSON", JSON.stringify(parsedJSON));
       const totalQuestions = Object.keys(parsedJSON).includes('images') ? Object.keys(parsedJSON).length - 1: Object.keys(parsedJSON).length;
 
       //Format page with updated info from JSON
@@ -53,7 +198,6 @@ function showQuestionSettings(){
       numberOfQuestions2.value = totalQuestions;
       document.querySelector('.form-label[for="numberOfQuestions1"]').innerText = `Number of Questions (10-${totalQuestions})`;
 
-      //TODO: Add event listener to load-quiz button and call processJSON with the necessary data
       document.getElementById("load-quiz").onclick = () => {
         document.getElementById("load-quiz").toggleAttribute("hidden");
         numberOfQuestions1.toggleAttribute("disabled");
@@ -101,8 +245,9 @@ const collapseList = [...collapseElementList].map(collapseEl => new bootstrap.Co
            questionsType: either community or official answers
 */
 function processJSON(q_json, numQuestions, questionsType, passingScore){
-  //debugger; 
   let jsonArr =  Object.keys(q_json);
+  let remainingQuiz = {}; //Leftover questions, may be saved to localStorage
+
   
   let genQuiz = {}; //structure: {1: {qNum: 'X', qAns: 'YZ', qShow: 'CABE}, 2...}
   for(var i = 0; i < numQuestions; i++){
@@ -111,11 +256,24 @@ function processJSON(q_json, numQuestions, questionsType, passingScore){
 
   if(jsonArr.indexOf("images") > 0) jsonArr.pop(); //Prevents the images from being selected as questions
 
+
+
   // Create array with random selection of questions from uploaded JSON
   for(var i = 0; i < numQuestions; i++){
     var x = getRndInteger(jsonArr.length);
-    genQuiz[i]['qNum'] = jsonArr[x];
-    jsonArr.splice(x,1);
+    genQuiz[i]['qNum'] = jsonArr.splice(x,1);
+  }
+
+  if (jsonArr.length > 0) {
+    jsonArr.forEach(val => remainingQuiz[val] = q_json[val]); //Filling remainingQuiz with leftover questions
+    if (q_json.images) {
+      remainingQuiz.images = q_json.images; //remainingJSON will include all images
+    }
+    //Save remaining quiz data
+    localStorage.setItem("remainingQuiz", JSON.stringify(remainingQuiz));
+  }
+  else{
+    localStorage.removeItem("remainingQuiz");
   }
 
   //Create array with the original answers corresponding to the question selection
@@ -145,15 +303,6 @@ class Quiz {
       this.hasImages = true;
     }
 
-    const CORRECT_ANSWER_DIV = "border bg-success-subtle border-success-subtle";
-    const CORRECT_ANSWER_INPUT = "correct-ans";
-
-    const MISSED_ANSWER_DIV = "border border-success-subtle border-3";
-    const MISSED_ANSWER_LABEL = "text-success";
-
-    const INCORRECT_ANSWER_DIV = "border bg-danger-subtle border-danger-subtle";
-    const INCORRECT_ANSWER_INPUT = "incorrect-ans";
-
     for (var i = 0; i < Object.keys(this.genQuiz).length; i++) {
       this.genQuiz[i]["qShow"] = this.randomizeOptions(i);
     }
@@ -161,15 +310,31 @@ class Quiz {
     let loadButton = document.getElementById("load-quiz");
     loadButton.setAttribute("disabled", "");
 
+    localStorage.setItem("currentQuiz", JSON.stringify(this.genQuiz));
+
     this.showQuiz();
     document.getElementById("submit-quiz").addEventListener("click",this,false); //adding eventListener to Class
   }
+
+  saveCurrentAnswers(event){
+    const selections = document.querySelectorAll("input:checked");
+    let selectedQuestions = {};
+
+    selections.forEach(el => {
+      const question = el.id.split("-")[1];
+      const answer = el.id.split("-")[2];
+      selectedQuestions[question] ? selectedQuestions[question] += answer: selectedQuestions[question] = answer; 
+    });
+
+    localStorage.setItem("currentAnswers", JSON.stringify(selectedQuestions));
+  };
 
   showQuiz() { //Generates all the questions and a submit button
     let accordionQuestions = document.getElementById("accordionQuestions");
 
     for (var i = 0; i < this.numQuestions; i++) accordionQuestions.appendChild(this.createQuestionChoices(i));
     this.appendSubmit();
+    document.getElementById("accordionQuestions").addEventListener("input", e => this.saveCurrentAnswers(e));
   }
 
   getQuestionText(q_num) {
@@ -415,6 +580,9 @@ class Quiz {
     document.getElementById("questionSettings").insertAdjacentHTML("afterend", resultsHTML);
     document.getElementById("results").scrollIntoView();
 
+    //Removing current quiz info
+    localStorage.removeItem("currentQuiz");
+    localStorage.removeItem("currentAnswers");
   }
 
   handleEvent(event){
