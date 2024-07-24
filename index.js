@@ -26,7 +26,7 @@ currentQuiz     -->   the current questions and answers on the Quiz, the content
 originalJSON    -->   original uploaded file
 quizName        -->   the name of the current Quiz, when being prompted to continue 
 currentAnswers  -->   the currently selected answers 
-remainingQuiz   -->   the remaining jsonArr after all the splices
+remainingQuiz   -->   the remaining quiz in new JSON format
 passingScore    -->   saved passing score
 
 When to write to localStorage:
@@ -60,6 +60,21 @@ function checkOngoingExams() {
     //Restart quiz
     document.getElementById("resume-B").addEventListener('click',e => restartQuiz());
   }
+  //Allow choosing a new exam pool
+  else if(remainingQuiz){
+    document.getElementById("promptText").innerText = `You can start a new quiz with leftover questions from ${quizName}.` 
+    document.getElementById("resume-progress").innerText = `You have solved ${Object.keys(originalJSON).length - Object.keys(remainingQuiz).length} questions.`;
+    document.getElementById("resume-pending").innerText = `${Object.keys(remainingQuiz).length} questions pending.`;
+    resumeModal.show();
+
+    //Option to continue the test
+    document.getElementById("resume-A").addEventListener('click',e => {
+      resumeModal.hide();
+      showRemainingQuiz();
+    });
+    //Restart quiz
+    document.getElementById("resume-B").addEventListener('click',e => restartQuiz());
+  }
 
   function resumeQuiz(){
     resumeModal.hide();
@@ -74,7 +89,6 @@ function checkOngoingExams() {
       passingScore);
     //
     selectSavedAnswers();
-    
   }
 
   function restartQuiz(){
@@ -87,6 +101,60 @@ function checkOngoingExams() {
     for (const [question, answers] of Object.entries(currentAnswers)) {
       answers.split("").forEach(answer => document.querySelector(`input[id^=ANS-${question}-${answer}]`).setAttribute("checked", true));
     }
+  }
+}
+
+//Show settings when quiz is resumed, a clone of showQuestionSettings
+function showRemainingQuiz(){
+  const filePicker = document.getElementById("formFile");
+
+
+  document.getElementById("quizSettings").removeAttribute("hidden"); 
+  filePicker.toggleAttribute("hidden");
+
+  const parsedJSON = JSON.parse(localStorage.getItem("remainingQuiz"));
+  const quizName = localStorage.getItem("quizName");
+  document.title = quizName + " | " + new Date(Date.now()).toDateString().split(" ").slice(1,3).toString().replaceAll(",", "-");
+  document.querySelector("h1").innerText = quizName;
+
+  //Show special text when resuming a Quiz
+  const fileTitle = document.querySelector(".form-label[for=formFile]");
+  fileTitle.innerText = `Solving the remaining quiz questions.`;
+  fileTitle.classList += "fw-bold fst-italic text-primary-emphasis mb-2 fs-5";
+
+  document.getElementById("load-quiz").removeAttribute("hidden");
+  document.getElementById("reload-page").removeAttribute("hidden");
+  document.getElementById("reload-page").addEventListener("click",e => localStorage.clear());
+
+  //Read JSON file and display settings dynamically
+  const totalQuestions = Object.keys(parsedJSON).includes('images') ? Object.keys(parsedJSON).length - 1: Object.keys(parsedJSON).length;
+
+  //Format page with updated info from JSON
+  const numberOfQuestions1 = document.getElementById("numberOfQuestions1");
+  const numberOfQuestions2 = document.getElementById("numberOfQuestions2");
+  const passingScore1 = document.getElementById("passingScore1");
+  const passingScore2 = document.getElementById("passingScore2");
+
+  if(totalQuestions < 10){
+    numberOfQuestions1.min = 1;
+    numberOfQuestions2.min = 1;
+  }
+
+  numberOfQuestions1.max = totalQuestions;
+  numberOfQuestions2.max = totalQuestions;
+
+  numberOfQuestions1.value = totalQuestions;
+  numberOfQuestions2.value = totalQuestions;
+  document.querySelector('.form-label[for="numberOfQuestions1"]').innerText = `Number of Questions (${numberOfQuestions1.min}-${totalQuestions})`;
+
+  document.getElementById("load-quiz").onclick = () => {
+    document.getElementById("load-quiz").toggleAttribute("hidden");
+    numberOfQuestions1.toggleAttribute("disabled");
+    numberOfQuestions2.toggleAttribute("disabled");
+    passingScore1.toggleAttribute("disabled");
+    passingScore2.toggleAttribute("disabled");
+
+    processJSON(parsedJSON, numberOfQuestions1.value, "answer_community", passingScore1);
   }
 }
 
@@ -196,9 +264,17 @@ function processJSON(q_json, numQuestions, questionsType, passingScore){
     genQuiz[i]['qNum'] = jsonArr.splice(x,1);
   }
 
-  jsonArr.forEach(val => remainingQuiz[val] = q_json[val]); //Filling remainingQuiz with leftover questions
-  //Save remaining quiz data
-  localStorage.setItem("remainingQuiz", JSON.stringify(remainingQuiz));
+  if (jsonArr.length > 0) {
+    jsonArr.forEach(val => remainingQuiz[val] = q_json[val]); //Filling remainingQuiz with leftover questions
+    if (q_json.images) {
+      remainingQuiz.images = q_json.images; //remainingJSON will include all images
+    }
+    //Save remaining quiz data
+    localStorage.setItem("remainingQuiz", JSON.stringify(remainingQuiz));
+  }
+  else{
+    localStorage.removeItem("remainingQuiz");
+  }
 
   //Create array with the original answers corresponding to the question selection
   for(var i = 0; i < numQuestions; i++){
