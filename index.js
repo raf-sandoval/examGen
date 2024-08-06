@@ -303,9 +303,21 @@ class Quiz {
       this.hasImages = true;
     }
 
-    for (var i = 0; i < Object.keys(this.genQuiz).length; i++) {
-      this.genQuiz[i]["qShow"] = this.randomizeOptions(i);
+    //If a quiz is ongoing, skip the option randomization
+    const currentQuiz = JSON.parse(localStorage.getItem("currentQuiz"));
+    const currentAnswers = JSON.parse(localStorage.getItem("currentAnswers"));
+
+    if(currentQuiz && currentAnswers){
+      for (var i = 0; i < Object.keys(this.genQuiz).length; i++) {
+        this.genQuiz[i]["qShow"] = currentQuiz[i]["qShow"];
+      }
     }
+    else{
+      for (var i = 0; i < Object.keys(this.genQuiz).length; i++) {
+        this.genQuiz[i]["qShow"] = this.randomizeOptions(i);
+      }
+    }
+    console.log(this.genQuiz);
 
     let loadButton = document.getElementById("load-quiz");
     loadButton.setAttribute("disabled", "");
@@ -565,13 +577,18 @@ class Quiz {
   }
 
   showScoreAndReturn(){
-    let pass = this.score / this.numQuestions >= (this.passingScore * 0.01);
+    const grade = this.score / parseInt(this.numQuestions) * 100;
+    const passingGrade = parseInt(this.passingScore.value);
+
+    let pass = grade / passingGrade;
+
+    console.log("Grade: ", grade, "\t passingGrade: ", passingGrade);
 
     let resultsHTML = `<div id="results" class="container col-md-10 mt-5">
     <div class="card border-${pass ? "success" : "danger"}">
         <div class="card-header bg-${pass ? "success" : "danger"} text-center"> <h3>Results</h3> </div>
         <div class="card-body text-center"> <h2>${this.score}/${this.numQuestions}</h2>
-            <h3 class="text-${pass ? "success" : "danger"}"><strong>${pass ? "PASS" : "FAIL"}</strong></h3>
+            <h3 class="text-${pass ? "success" : "danger"}"><strong>${pass ? `PASS (${grade}%)` : "FAIL"}</strong></h3>
             <button class="btn btn-warning btn-sm mt-3" onClick="location.reload()">Restart Test</button>
         </div>
       </div>
