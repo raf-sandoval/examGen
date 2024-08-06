@@ -588,7 +588,7 @@ class Quiz {
     <div class="card border-${pass ? "success" : "danger"}">
         <div class="card-header bg-${pass ? "success" : "danger"} text-center"> <h3>Results</h3> </div>
         <div class="card-body text-center"> <h2>${this.score}/${this.numQuestions}</h2>
-            <h3 class="text-${pass ? "success" : "danger"}"><strong>${pass ? `PASS (${grade}%)` : "FAIL"}</strong></h3>
+            <h3 class="text-${pass ? "success" : "danger"}"><strong>${pass ? `PASS` : "FAIL"} (${Math.round(grade * 100) / 100}%)</strong></h3>
             <button class="btn btn-warning btn-sm mt-3" onClick="location.reload()">Restart Test</button>
         </div>
       </div>
